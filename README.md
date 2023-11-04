@@ -54,3 +54,5 @@ containerStatuses:
 그리고 이제 Job이나 CronJob으로 생성된 Pod의 경우 자신의 일을 수행했을 때는 Running 중이지만 일을 마치게 되면 Pod는 더 이상 일을 하지 않는 상태가 되는데 여기서 Pod의 상태는 Failed나 Succeeded 두 가지로 갈릴 수가 있다. 만약 작업을 하고 있는 컨테이너 중에 하나라도 문제가 생겨서 에러가 되면 Pod의 상태는 Failed가 되는 것이고 컨테이너들이 모두 Completed로 해당 일을 맞췄을 때 Succeeded가 된다. 이때 또 Pod의 컨디션 값이 변하게 되는데 성공이건 실패건 간에 ContainerReady와 Ready의 값이 false로 바뀌게 된다.
 
 추가적으로 Pending 중에 바로 Failed로 빠지는 경우가 있다. Pending이라 Running 중에 통신 장애가 발생하면 Pod가 unknown 상태로 바뀌는데 통신 장애가 빨리 해결이 되면 다시 기준 상태로 변경이 되지만 계속 지속이 되면 Failed로 가기도 한다.
+
+## Pod - ReadinessProbe, LivenessProbe
