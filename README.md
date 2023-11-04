@@ -1,1 +1,56 @@
 # k8s-intermediate
+## Pod - Lifecycle
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/e3018d06-4e42-4438-a6a3-b2ec0b2ff2b8)
+
+라이프사이클의 특징은 각 단계에 따라 행해지는 행동이 다르다. ReadinessProbe, LivenessProbe, QoS, 각각의 Policy 등 여러 기능들이 Pod에 특정 단계와 밀접한 관련이 있다.
+
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/8b674deb-28f3-41f1-8ca7-faef3179e666)
+
+Pod가 있고 status 안에 Pod 전체 상태를 대표하는 속성이 있다. 그리고 Pod가 생성되면서 실행하는 단계들이 있는데 그 단계와 상태를 알려주는 게 conditions라는 속성이다. Pod 안에는 컨테이너가 있다. 컨테이너마다 State가 있고 컨테이너의 상태가 있다. Pod의 Phase에는 Pending, Running, Succeeded, Failed, Unkown 상태가 있다. Pending은 Pod가 처음 만들어지기 시작하는 시점이다. conditions는 4가지 종류가 있고 reason이라고 해서 status가 false인 경우 false의 원인이 무엇인지 알아야 되기 때문에 reason이 존재하고 ContainersNotReady라고 해서 컨테이너가 아직 작업이 진행중이라는 것을 알 수 있다. 다음엔 ContainerStatuses를 보면 상태는 Wating, Running, Terminateed 세 가지 상태가 있다. conditions와 마찬가지로 세부 내용을 알기 위한 Reason이 있다. yml 파일을 보면 유추할 수 있는 부분이 imageID 값이 없는 것으로 보아 image가 아직 다운로드되지 않았다는 것을 알 수 있다.
+
+```yml
+status:
+  phase: Pending
+  conditions:
+    - type: Initialized
+      status: 'True'
+      lastProbeTime: null
+      lastTransitionTime: '2019-09-26T22:07:56Z'
+    - type: PodScheduled
+      status: 'True'
+      lastProbeTime: null
+      lastTransitionTime: '2019-09-26T22:07:56Z'
+    - type: ContainersReady
+      status: 'False'
+      lastProbeTime: null
+      lastTransitionTime: '2019-09-26T22:08:11Z'
+      reason: ContainersNotReady
+    - type: Ready
+      status: 'False'
+      lastProbeTime: null
+      lastTransitionTime: '2019-09-26T22:08:11Z'
+      reason: ContainersNotReady
+containerStatuses:
+  - name: container
+    state:
+      waiting:
+        reason: ContainerCreating
+    lastState: {}
+    ready: false
+    restartCount: 0
+    image: tmkube/init
+    imageID: ''
+    started: false
+```
+
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/124fc046-28d4-4d56-bba3-7f22bd25becb)
+
+먼저, Pod의 최초 상태는 Pending이고 해당 상태일 때 Pod 안에서 일어나는 일들을 보자.   
+- initContainer : 본 컨테이너가 기동되기 전에 초기화시켜야 되는 내용들이 있을 경우이다. 만약 볼륨이나 보안 세팅을 위해 사전 설정을 해야 되는 일이 있을 경우 Pod 생성 내용 안에 initContainer라는 항목으로 초기화 스크립트를 넣을 수가 있고 해당 스크립트가 본 컨테이너보다 먼저 실행이 돼서 그 작업이 성공적으로 끝났거나 또는 아예 설정을 하지 않았을 경우 True, 그리고 실패를 하게 되면 False가 된다.
+- PodScheduled : Pod가 어느 노드 위에 올라갈지 직접 노드를 지정했을 경우에는 지정한 해당 노드에, 아니면 Kubernetes가 알아서 자원의 상황을 판단해서 Node를 결정하기도 하는데 이게 완료가 되면 PodScheduled는 True가 된다. Pod의 동작 순서 과정은 PodScheduled가 먼저 동작한 후 Initialized를 한다.
+
+다음으로 컨테이너의 이미지를 다운로드하는 동작이 있고 컨테이너 상태는 Wating이고 reason은 ContainerCreating이다. 그리고 이제 본격적으로 컨테이너가 기동되면서 Pod와 컨테이너의 상태는 Running이 된다. 이 때 컨테이너가 기동 중에 문제가 발생해서 재시작될 수도 있다. 그럼 이때 컨테이너의 상태는 wating이 되고 crash-rollback-off라는 reason이 나온다. Pod는 이러한 상태에 대해서 Running이라고 간주하고 내부 conditions의 containerReady와 Ready는 False이다. 그래도 결국 모든 컨테이너들이 정상적으로 기동이 돼서 원활하게 돌아간다면 condition은 모두 True로 변경이 된다.
+
+그리고 이제 Job이나 CronJob으로 생성된 Pod의 경우 자신의 일을 수행했을 때는 Running 중이지만 일을 마치게 되면 Pod는 더 이상 일을 하지 않는 상태가 되는데 여기서 Pod의 상태는 Failed나 Succeeded 두 가지로 갈릴 수가 있다. 만약 작업을 하고 있는 컨테이너 중에 하나라도 문제가 생겨서 에러가 되면 Pod의 상태는 Failed가 되는 것이고 컨테이너들이 모두 Completed로 해당 일을 맞췄을 때 Succeeded가 된다. 이때 또 Pod의 컨디션 값이 변하게 되는데 성공이건 실패건 간에 ContainerReady와 Ready의 값이 false로 바뀌게 된다.
+
+추가적으로 Pending 중에 바로 Failed로 빠지는 경우가 있다. Pending이라 Running 중에 통신 장애가 발생하면 Pod가 unknown 상태로 바뀌는데 통신 장애가 빨리 해결이 되면 다시 기준 상태로 변경이 되지만 계속 지속이 되면 Failed로 가기도 한다.
