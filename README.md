@@ -1,4 +1,6 @@
 # k8s-intermediate
+해당 문서 출처는 [대세는 쿠버네티스 [초급~중급]](https://www.inflearn.com/course/%EC%BF%A0%EB%B2%84%EB%84%A4%ED%8B%B0%EC%8A%A4-%EA%B8%B0%EC%B4%88) 기반으로 작성되었습니다. 
+
 ## Pod - Lifecycle
 ![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/e3018d06-4e42-4438-a6a3-b2ec0b2ff2b8)
 
