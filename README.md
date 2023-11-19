@@ -58,3 +58,4 @@ containerStatuses:
 추가적으로 Pending 중에 바로 Failed로 빠지는 경우가 있다. Pending이라 Running 중에 통신 장애가 발생하면 Pod가 unknown 상태로 바뀌는데 통신 장애가 빨리 해결이 되면 다시 기준 상태로 변경이 되지만 계속 지속이 되면 Failed로 가기도 한다.
 
 ## Pod - ReadinessProbe, LivenessProbe
+Pod를 만들면 그 안에 컨테이너가 생기고 Pod와 컨테이너의 상태가 Running되면서 그 안에 있는 앱도 정상적으로 구동이 되고 있을 것이다. 그리고 서비스에 연결이 되고 이 서비스의 ip가 외부에 알려지면서 외부에는 이 서비스를 통해 많은 사람들이 실시간으로 접근하게 되는 상황이 된다. 그럼, 한 서비스에 2개의 Pod가 연결되어 있고 50%씩 트래픽이 나눠진다고 가정해보자. 
