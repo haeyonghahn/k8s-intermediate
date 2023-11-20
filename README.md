@@ -67,6 +67,8 @@ Pod를 만들면 그 안에 컨테이너가 생기고 Pod와 컨테이너의 상
 그래서 다시 앱이 구동되고 있는데 장애가 발생했다. 근데 Pod는 러닝 상태이다. 이럴 때 흔히 서비스를 Tomcat으로 돌릴 때 Tomcat은 돌고 있지만 그 위에 띄워져 있는 앱이 메모리 오버플로우라든지 문제가 생겨서 500 Interval Error 자체의 프로세스가 죽은 게 아니라 그 위에 돌고 있는 서비스에 문제가 생긴 거라 Tomcat 프로세스를 보고 있는 Pod 입장에서는 계속 Running 상태로 있게 되고 이 상황이 되면 흐르던 트래픽은 다시 문제가 된다. 이때 앱에 대한 장애 상황을 감지해주는 게 `LivenessProbe`인데 마찬가지로 Pod를 만들 때 `LivenessProbe`를 달아주면 해당 앱에 문제가 생기면 Pod를 재실행하게 만들어서 잠깐의 트래픽 에러는 발생하겠지만 지속적으로 에러 상태가 되는 것을 방지해준다. 
 
 ## Pod - QoS Classes
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/9c08f6a4-ba2b-4708-ba42-b171030d9443)
+
 노드 위에 Pod가 3개 만들어져서 균등하게 자원을 모두 사용하고 있는 상태라고 가정해보자. 근데 이 상태에서 Pod1이 추가적으로 자원을 더 사용해야 되는 상황이 발생했다. 근데 노드에는 추가적으로 할당받을 수 있는 자원이 없기 때문에 Pod1이 리소스 부족으로 에러가 나고 다운이 되어야 할까? 아니면 Pod2나 Pod3 중에 하나를 다운시키고 Pod1에 필요한 만큼의 자원을 적용해줘야할까? Kubernetes에서는 앱의 중요도에 따라 이런 걸 관리할 수 있도록 세 가지 단계로 `Quality of Service`를 지원해주고 있다. 위의 그림에서 `BestEffort`가 부여된 Pod가 가장 먼저 다운이 돼서 자원이 반환되고 Pod1은 필요한 양의 자원을 사용할 수 있게 된다. 다음엔 노드에 어느 정도 자원이 남아있지만 Pod2에서 그보다 많은 자원을 요구하는 상황이 됐다면 `Burstable`이 적용된 Pod가 다음으로 다운이 되면서 자원이 회수가 된다. 그래서 `Guaranteed`가 마지막으로 Pod를 안정적으로 유지시켜주는 클래스이다. Pod에 이런 클래스들을 보여할 수 있는지 알아보면 QoS는 특정 속성이 있어서 설정하는 것은 아니고 컨테이너에 리소스 설정이 있는데 여기에 Request와 Limit에 따라서 메모리와 CPU를 어떻게 설정하는지로 결정이 된다.
 
 먼저, `Guaranteed`는 Pod에 여러 컨테이너가 있다면 모든 컨테이너마다 Request와 limit가 있어야 한다. 그리고 그 안에 메모리와 CPU 둘 다 설정이 되어 있어야 한다. 그리고 각 컨테이너 안에 설정된 메모리와 CPU 값은 Request와 limit가 같아야 한다. 이 규칙에 맞아야 Kubernetes가 이 Pod를 Guaranteed로 판단한다. 그리고 `BestEffort`는 Pod의 어떤 컨테이너도 Request와 limit가 설정되어 있지 않다면 BestEffort가 된다. `Burstable`은 Guaranteed와 BestEffort의 중간인데 Request와 limit는 설정되어 있지만 Request의 수치가 작던지, 아니면 Request만 설정되어 있고 Limit는 설정되어 있지 않는 경우. 또는 Pod에 컨테이너가 두 개인데 하나는 완벽하게 설정이 되어 있지만 다른 하나가 설정되어 있지 않다면 모두 Burstable 클래스가 된다.
