@@ -74,3 +74,6 @@ Pod를 만들면 그 안에 컨테이너가 생기고 Pod와 컨테이너의 상
 먼저, `Guaranteed`는 Pod에 여러 컨테이너가 있다면 모든 컨테이너마다 Request와 limit가 있어야 한다. 그리고 그 안에 메모리와 CPU 둘 다 설정이 되어 있어야 한다. 그리고 각 컨테이너 안에 설정된 메모리와 CPU 값은 Request와 limit가 같아야 한다. 이 규칙에 맞아야 Kubernetes가 이 Pod를 Guaranteed로 판단한다. 그리고 `BestEffort`는 Pod의 어떤 컨테이너도 Request와 limit가 설정되어 있지 않다면 BestEffort가 된다. `Burstable`은 Guaranteed와 BestEffort의 중간인데 Request와 limit는 설정되어 있지만 Request의 수치가 작던지, 아니면 Request만 설정되어 있고 Limit는 설정되어 있지 않는 경우. 또는 Pod에 컨테이너가 두 개인데 하나는 완벽하게 설정이 되어 있지만 다른 하나가 설정되어 있지 않다면 모두 Burstable 클래스가 된다.
 
 Burstable이 여러 Pod가 있을 경우 누가 먼저 삭제가 되는지도 알 필요가 있다. OOM 스코어라고 해서 Out of Memory 스코어라는 것에 따라 결정이 된다. 예를 들어, 두 개의 Pod의 Request 메모리가 5Gi와 8Gi로 설정된 상태인데 그 안에 돌아가고 있는 앱에 실제 메모리가 똑같이 4Gi만큼 사용되고 있다고 가정하면 Pod2의 메모리 사용량은 75%이고 Pod3은 50% 이다. 그럼 OOM 스코어가 Pod2 75%로 더 크기 때문에 Kubernetes는 OOM 스코어가 더 큰 Pod2를 먼저 제거한다.
+
+## Pod - Node Scheduling
+Pod가 기본적으로 스케줄러에 의해서 노드에 할당이 되지만 사용자의 의도에 의해서 노드를 지정할 수도 있고 운용자가 특정 노드를 사용하지 못하도록 관리할 수 있다. Kubernetes는 다양한 기능들로 이것을 지원하고 있다. 
