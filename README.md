@@ -77,3 +77,14 @@ Burstable이 여러 Pod가 있을 경우 누가 먼저 삭제가 되는지도 �
 
 ## Pod - Node Scheduling
 Pod가 기본적으로 스케줄러에 의해서 노드에 할당이 되지만 사용자의 의도에 의해서 노드를 지정할 수도 있고 운용자가 특정 노드를 사용하지 못하도록 관리할 수 있다. Kubernetes는 다양한 기능들로 이것을 지원하고 있다. 
+
+## Service - Headless, Endpoint, ExternalName
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/37a1a33b-864c-442a-a096-a9edb9cea8b8)
+
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/4e44b84a-cc61-4545-ae56-4409b82ab056)
+
+### Service - Headless
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/994b277a-2692-4bdc-9025-8cc6e0df9880)
+
+default라는 Namespace에 Pod 2개와 서비스가 연결되어 있다. 이 서비스는 ClusterIp로 만든 서비스이다. 그리고 Kubernetes DNS가 있는데 이 DNS의 이름은 cluster.local이다. DNS는 파드건 서비스건 생성을 하면 긴 도메인 이름과 IP가 저장이 된다. 이름의 구조는 서비스의 경우 서비스 이름과 네임스페이스. 그리고 서비스의 약어인 svc 끝으로 DNS 이름이 붙어져서 만들어진다. 파드의 경우 IP의 네임스페이스, pod, DNS의 이름이 결합돼서 생성이 된다. 이렇게 규칙을 가지고 만들어지는데 이것을 `Fully Qualified Domain Name`이라고 부른다. 네임스페이스 안에서는 서비스는 앞자리만 짧게 써도 되지만 파드는 다 입력해야 한다. 그리고 앞부분이 IP이기 때문에 거의 쓸 수가 없다. 그럼 파드의 입장에서 서비스의 도메인 이름을 DNS 질의를 통해 IP를 가져오기 때문에 우리는 서비스의 이름만 알아도 해당 서비스에 접근할 수 있고 모든 이름들은 사용자가 직접 만드는 것이니까 미리 서비스의 이름을 예상해서 Pod에 미리 심어놓을 수 있다. 그래서 단순히 서비스에만 연결을 하는 데는 ClusterIp로 서비스르 만들어도 문제는 없다. 하지만 동일한 상황에서 Pod가 Pod4에 직접 연결하고 싶다면 서비스를 headless 서비스로 만들어야 한다. 만드는 방법은 ClusterIp 속성에 `none`이라고 넣는다. 이 서비스에 IP를 안 만들겠다는 내용이고 실제로 안만들어진다. 그리고 파드를 만들 때 신경 써 줘야 하는 것은 `hostname`이라는 속성에 도메인 이름을 넣어야 하고 `subdomain`에 이 서비스의 이름을 넣어야 한다.
+
