@@ -92,3 +92,16 @@ default라는 Namespace에 Pod 2개와 서비스가 연결되어 있다. 이 서
 ![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/92d9b527-22cb-4408-9e23-ee4d66516456)
 
 서비스와 파드를 연결할 때 라벨을 통해 연결한다. 이것은 사용자 측면에서 이 둘의 연결을 하기 위한 도구이고 Kubernetes는 매칭이 됐을 때 `Endpoint`를 만들어서 실제 연결고리 관리를 한다. Kubernetes가 Endpoint를 만드는 방법은 서비스의 이름과 동일한 이름으로 엔드포인트의 이름을 설정하고 엔드포인트 안에는 파드의 접속 정보를 넣어준다. 그렇기 때문에 해당 규칙을 알면 라벨과 셀렉터를 안 만들어도 직접 연결을 할 수가 있다. 그런데 IP는 변경 가능성이 있기 때문에 도메인 이름을 사용하는 것이다. Github의 IP 주소도 변경이 될 수 있고 그래서 도메인 이름을 지정하는 방법도 필요한데 이럴 때 사용하는 것이 `External Name`이다. 서비스에 ExternalName이라는 속성을 달아서 이 안에 도메인 이름을 넣을 수가 있다. 이렇게 넣으면 DNS 캐시가 내부와 외부 DNS를 찾아서 IP를 알아낸다. 그래서 결국 Pod는 서비스를 가리키고만 잇으면 서비스에서 필요시마다 해당 도메인 주소를 변경할 수가 있어서 접속할 곳이 변경되더라도 Pod를 수정하고 재배포하는 일은 없어지게 된다.
+
+## Volume - Dynamic Provisioning, StorageClass, Status, ReclaimPolicy
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/a40f57d5-8ced-4b4b-9744-2042639552d2)
+
+먼저 볼륨은 데이터를 안정적으로 유지하기 위해서 사용을 하는 것이다. 그러기 위해서 실제 데이터는 Kubernetes 클러스터와 분리가 되서 관리가 된다. 그리고 이런 방식으로 관리할 수 있는 볼륨의 종류들이 많은데 크게 내부망에서 관리하는 경우와 외부망에서 관리하는 경우로 나눌 수 있고 외부망에서는 AWS, GCP와 같은 클라우드 스토리지를 두고 여기에 Kubernetes cluster와 연결을 해서 사용할 수 있다. 내부망에는 Kubernetes를 구성하는 노드들이 있는데 기본적으로 Kubernetes에서 이 노드들의 실제 물리적은 공간에 데이터를 만들 수 있는 hostPath나 local 볼륨이 있다. 그리고 별도의 On-Premise Solution들을 노드에 설치할 수 있다. 그래서 Kubernetes 클러스터 밖에 실제 볼륨이 마련되어 있다면 관리자는 PV를 만드는데 Storage와 AccessMode를 정하고 볼륨을 선택해서 연결한다. 그리고 사용자는 원하는 Storage와 AccessMode로 PVC를 만들면 Kubernetes가 알아서 적절한 PV와 연결을 해주고 PVC를 Pod에서 사용한다.
+
+볼륨을 사용하면 볼륨이 필요할 때마다 PV를 만들어줘야 하고 원하는 PV랑 연결을 하고 스토리지랑 액세스를 맞춰야하고 복잡하다. 그래서 Kubernetes는 `Dynamic Provisioning`이라고 해서 사용자가 PVC를 만들면 알아서 PV를 만들어주고 실제로 볼륨과 연결해주는 기능이 존재한다. PV에는 Pod처럼 각각의 상태가 존재한다. 이 상태를 통해서 PV가 PVC에 연결되어 있는 상태인지 아니면 끊겼는지 또는 에러가 났는지 알 수 있고 PV를 삭제하는 부분에 있어서 정책적인 요소가 있다.
+
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/1714a3cd-21e3-4438-9c99-9f558e4c98a4)
+
+`Dynamic Provisioning`은 사전작업으로 `스토리지 솔루션`을 설치해야 한다. 설치를 하면 서비스나 파드 등 여러 오브젝트들이 생성이 되지만 이 중에서 중요한 것은 `StorageClass`라는 오브젝트이다. 이 스토리지 클래스를 사용해서 동적으로 PV를 만들 수 있는데 PVC를 만들 때 `StorageClassName`이라는 부분이 있다. 여기에 StorageClass 이름을 넣으면 자동으로 스토리지 OS 볼륨을 가진 PV가 만들어진다. 그리고 스토리지 클래스는 추가로 만들 수 있고 Default를 설정해서 만들어 놓으면 PVC에 스트리지 클래스 이름을 생략했을 때 Default 스토리지 클래스가 적용이 되서 PV가 만들어진다. 
+
+`Status & ReclaimPolicy`에서 `Status`는 최초 PV가 만들어졌을 때 `Available` 상태고 PVC와 연결이 되면 `Bound` 상태로 변하게 된다. 이렇게 PV를 만드는 경우에 볼륨의 실제 데이터가 만들어진 상태는 아니고 Pod의 서비스가 유지되다가 파드가 삭제될 경우에는 PVC와 PV에는 아무런 변화가 없기 때문에 파드가 삭제되더라도 데이터에 문제가 없게 된다. PVC를 삭제해야지만 PV와 연결이 끊어지면서 PVE의 상태는 `Released` 상태로 변하게 된다. 이런 과정 중에 PVE와 실제 데이터 간의 연결에 문제가 생기면 `Failed` 상태로 변하기도 한다. PVC가 삭제 됐을 때 상황에 대해서 PV에 설정해 놓은 `ReclaimPolicy`에 따라서 PV에 대한 상태가 달라진다. 
