@@ -132,3 +132,9 @@ Kubernetes 설치할 때 kubectl도 설치하고 설정 내용 중 kube-config �
 
 ### ServiceAccount
 Kubernetes 클러스터와 API 서버가 있고 Namespace를 만들게 되면 기본적으로 default라는 이름의 `ServiceAccount`가 자동으로 만들어진다. 그리고 이 ServiceAccount에는 Secret 하나 달려있는데 내용으로는 `CA crt` 정보와 토큰값이 들어있다. 그리고 Pod를 만들면 이 ServiceAccount가 연결이 되고 Pod는 토큰값을 통해서 API 서버에 연결을 할 수 있는데 결국 토큰값만 알면 사용자도 이 값을 가지고 API 서버에 접근할 수가 있다.
+
+## Authorization
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/3a0e5ad3-cc57-4a54-8fbd-909d59186550)
+
+## Dashboard
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/4657231a-a833-49c3-bd05-2e45f9afc68c)
