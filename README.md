@@ -105,3 +105,14 @@ default라는 Namespace에 Pod 2개와 서비스가 연결되어 있다. 이 서
 `Dynamic Provisioning`은 사전작업으로 `스토리지 솔루션`을 설치해야 한다. 설치를 하면 서비스나 파드 등 여러 오브젝트들이 생성이 되지만 이 중에서 중요한 것은 `StorageClass`라는 오브젝트이다. 이 스토리지 클래스를 사용해서 동적으로 PV를 만들 수 있는데 PVC를 만들 때 `StorageClassName`이라는 부분이 있다. 여기에 StorageClass 이름을 넣으면 자동으로 스토리지 OS 볼륨을 가진 PV가 만들어진다. 그리고 스토리지 클래스는 추가로 만들 수 있고 Default를 설정해서 만들어 놓으면 PVC에 스트리지 클래스 이름을 생략했을 때 Default 스토리지 클래스가 적용이 되서 PV가 만들어진다. 
 
 `Status & ReclaimPolicy`에서 `Status`는 최초 PV가 만들어졌을 때 `Available` 상태고 PVC와 연결이 되면 `Bound` 상태로 변하게 된다. 이렇게 PV를 만드는 경우에 볼륨의 실제 데이터가 만들어진 상태는 아니고 Pod의 서비스가 유지되다가 파드가 삭제될 경우에는 PVC와 PV에는 아무런 변화가 없기 때문에 파드가 삭제되더라도 데이터에 문제가 없게 된다. PVC를 삭제해야지만 PV와 연결이 끊어지면서 PVE의 상태는 `Released` 상태로 변하게 된다. 이런 과정 중에 PVE와 실제 데이터 간의 연결에 문제가 생기면 `Failed` 상태로 변하기도 한다. PVC가 삭제 됐을 때 상황에 대해서 PV에 설정해 놓은 `ReclaimPolicy`에 따라서 PV에 대한 상태가 달라진다. 
+
+## Accessing API - Overview
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/9da8bd9e-a72e-4e93-8c0e-89c50e9ba888)
+
+마스터노드에 Kubernetes API 서버가 있는데 이 API 서버를 통해서만 Kubernetes의 자원을 만들거나 조회를 할 수 있다. Kubernetes를 설치할 때 `kubectl`도 설치해서 CLI로 자원을 조회할 수 있는 것도 다 이 API 서버에 접근을 해서 정보를 가져오는 것이다. 내부에서는 이렇게 접근할 수 있지만 내부에서 이 API 서버로 접근을 하려면 인증서를 가지고 있는 사람만 `HTTPS`로 접근할 수 있다. 근데 만약 내부 관리자가 kubectl 명령으로 프록시를 열어줬다면 인증서 없이 HTTP로 API 서버에 접근할 수 있다. 그리고 kubectl은 마스터 내부에만 설치할 수 있는 것은 아니고 외부 PC에서도 설치해서 사용할 수 있는데 config 기능을 활용하면 만약 Kubernetes Cluster가 여러 대가 있을 때 간편한 명령을 통해서 접근할 수 있는 클러스터의 연결 상태를 유지할 수 있다. 연결이 된 상태에서는 `kubectl get` 명령으로 해당 클러스터에 있는 Pod 정보들을 가져올 수 있다. 이러한 접근 방법들은 유저 입장에서 API 서버에 접근을 위한 방법이고 `User Account`라고 한다. 
+
+Pod 입장에서 생각해보자. Pod 입장에서는 API 서버에 마음껏 접근할 수 있을까? 만약 그렇게 된다면 Pod를 만들기만 하면 누구나 Pod를 통해서 API 서버에 접근이 가능해지기 때문에 보안상 문제가 있게 된다. 그래서 Kubernetes에서는 `Service Account`라고 해서 Pod들이 API 서버로 접근하는 방법이 있다. 여기까지의 설명이 `Authentication` 이다.
+
+만약 Namespace로 Pod가 분리되어 있는 상태에서 이 Namespace에 있는 Pod가 API 서버에 접근할 수 있다고 해서 A Namespace에 있는 Pod를 조회해도 될까? 이것은 권한 여부에 따라 가능하게 할 수도 있고 못하게 할 수가 있다. 이러한 부분이 `Authorization`이다. 그리고 권한까지 문제가 없다면 `Admission Control`이라고 해서 만약 PV를 만들 때 관리자가 용량을 1GB 이상으로 만들지 못하도록 설정해 놓았다면 Pod를 만들라는 API 요청이 들어왔을 때 Kubernetes는 설정된 크기를 넘지 못하도록 체크를 해야 한다. 
+
+## Authentication - X509 Certs, kubectl, ServiceAccount
