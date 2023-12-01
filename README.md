@@ -116,3 +116,19 @@ Pod 입장에서 생각해보자. Pod 입장에서는 API 서버에 마음껏 �
 만약 Namespace로 Pod가 분리되어 있는 상태에서 이 Namespace에 있는 Pod가 API 서버에 접근할 수 있다고 해서 A Namespace에 있는 Pod를 조회해도 될까? 이것은 권한 여부에 따라 가능하게 할 수도 있고 못하게 할 수가 있다. 이러한 부분이 `Authorization`이다. 그리고 권한까지 문제가 없다면 `Admission Control`이라고 해서 만약 PV를 만들 때 관리자가 용량을 1GB 이상으로 만들지 못하도록 설정해 놓았다면 Pod를 만들라는 API 요청이 들어왔을 때 Kubernetes는 설정된 크기를 넘지 못하도록 체크를 해야 한다. 
 
 ## Authentication - X509 Certs, kubectl, ServiceAccount
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/324f9607-8afc-40f6-9c74-55957390479c)
+
+### X509 Certs
+클러스터에 6443 포트로 API 서버가 열려 있다. 사용자가 여기로 HTTPS 접근을 하려면 Kubernetes 설치 시에 `kube-config`라고 해서 이 클러스터에 접근할 수 있는 정보들이 들어있는 파일이 있는데 이 파일 안에 인증서 내용이 있다. 그래서 여기 클라이언트 키와 인증서를 복사해서 가지고 오면 된다. 이 파일이 무엇이고 어떻게 만드는지에 대해 알아보자. 
+
+최초에 발급 기간과 클라이언트에 대한 개인 키를 만들고 이 개인 키를 가지고 인증서를 만들기 위한 각각의 인증 요청서라는 `csr` 파일을 만든다. 그래서 `ca`의 경우 이 인증 요청서를 가지고 인증서를 만드는데 kube-config에 있는 `cacrt`가 이것이다. 클라이언트 인증서의 경우 발급기간 개인키와 인증서 그리고 클라이언트의 요청서를 합쳐서 만든다. 이렇게 만들어진 클라이언트 인증서가 kube-config 파일에 `Client crt` 파일로 들어있고 kube-config 파일에는 `Client key`도 있다. 
+
+Kubernetes 설치할 때 kubectl도 설치하고 설정 내용 중 kube-config 파일을 kubectl에서 사용하도록 복사하면 kubectl로 API에 인증이 돼서 리소스들을 조회할 수 있다. accept-hosts 옵션을 통해서 8001번 포트로 프록시를 열어두면 외부에서도 HTTP로 접근을 할 수 있게 되는데 그러면 kubectl이 인증서를 가지고 있기 때문에 사용자는 아무런 인증서 없이 접근할 수 있게 된다. 
+
+### kubectl
+그리고 외부 서버에 kubectl을 설치해서 멀티 클러스터에 접근을 하는 내용이다. 사전에 각 클러스터에 있는 kube-config 파일이 내 kubectl에도 있어야 된다. 이렇게 돼 있다면 사용자는 원하는 클러스터에 접근을 해서 자원을 조회하고 만들 수가 있다. kube-config 안에는 `clusters`라는 항목으로 클러스터를 등록할 수가 있고 내용으로는 name과 url 그리고 CA 인증서가 있다. 그리고 `users`라는 항목으로 사용자를 등록할 수가 있는데 내용으로는 유저 이름과 이 유저에 대한 개인 키와 인증서가 있다. 그래서 이렇게 셋팅이 되어 있다면 contexts 항목을 통해서 이 둘을 연결할 수가 있다. 내용으론 컨텍스트 이름과 연결할 클러스터, 유저 이름이 있다. 
+
+이렇게 kube-config가 만들어졌을 때 사용자가 클러스터 A에 연결하고 싶으면 `kubectl config` 명령으로 현재 사용하고 싶은 컨텍스트를 지정할 수가 있고 지정을 했을 때 `kubectl get node` 명령을 알리게 되면 클러스터 A에 대한 노드 정보들이 조회가 된다.
+
+### ServiceAccount
+Kubernetes 클러스터와 API 서버가 있고 Namespace를 만들게 되면 기본적으로 default라는 이름의 `ServiceAccount`가 자동으로 만들어진다. 그리고 이 ServiceAccount에는 Secret 하나 달려있는데 내용으로는 `CA crt` 정보와 토큰값이 들어있다. 그리고 Pod를 만들면 이 ServiceAccount가 연결이 되고 Pod는 토큰값을 통해서 API 서버에 연결을 할 수 있는데 결국 토큰값만 알면 사용자도 이 값을 가지고 API 서버에 접근할 수가 있다.
