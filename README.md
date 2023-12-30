@@ -138,3 +138,9 @@ Kubernetes 클러스터와 API 서버가 있고 Namespace를 만들게 되면 �
 
 ## Dashboard
 ![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/4657231a-a833-49c3-bd05-2e45f9afc68c)
+
+## Controller
+### StatefulSet
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/41bdbf31-f73b-41b4-924b-a18cbac38fd1)
+
+어플리케이션 종류에는 Stateless Application과 Stateful Application이 있다. Stateless는 대표적으로 웹서버가 있다. 그리고 Stateful은 대표적으로 데이터베이스가 있다. Stateless는 앱이 배포되더라도 다 똑같은 서비스의 역할을 한다. 반면 Stateful은 각각의 앱마다 자신의 역할이 있다. MongoDB의 경우 하나는 Primary 역할, 또 하나는 Secondary 그리고 Arbiter의 역할이 있는데, 간단히 설명하면 Primary가 main이고 Primary가 죽으면 Arbiter가 감지해서 Secondary가 Primary의 역할을 할 수 있도록 변경해준다.
