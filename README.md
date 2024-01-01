@@ -143,4 +143,16 @@ Kubernetes 클러스터와 API 서버가 있고 Namespace를 만들게 되면 �
 ### StatefulSet
 ![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/41bdbf31-f73b-41b4-924b-a18cbac38fd1)
 
-어플리케이션 종류에는 Stateless Application과 Stateful Application이 있다. Stateless는 대표적으로 웹서버가 있다. 그리고 Stateful은 대표적으로 데이터베이스가 있다. Stateless는 앱이 배포되더라도 다 똑같은 서비스의 역할을 한다. 반면 Stateful은 각각의 앱마다 자신의 역할이 있다. MongoDB의 경우 하나는 Primary 역할, 또 하나는 Secondary 그리고 Arbiter의 역할이 있는데, 간단히 설명하면 Primary가 main이고 Primary가 죽으면 Arbiter가 감지해서 Secondary가 Primary의 역할을 할 수 있도록 변경해준다.
+어플리케이션 종류에는 Stateless Application과 Stateful Application이 있다. Stateless는 대표적으로 웹서버가 있다. 그리고 Stateful은 대표적으로 데이터베이스가 있다. Stateless는 앱이 배포되더라도 다 똑같은 서비스의 역할을 한다. 반면 Stateful은 각각의 앱마다 자신의 역할이 있다. MongoDB의 경우 하나는 Primary 역할, 또 하나는 Secondary 그리고 Arbiter의 역할이 있는데, 간단히 설명하면 Primary가 main이고 Primary가 죽으면 Arbiter가 감지해서 Secondary가 Primary의 역할을 할 수 있도록 변경해준다. Stateless 앱은 단순 복제인 것과 달리 Stateful 앱은 각 앱마다 자신의 고유 역할을 가지고 있다. 그래서 만약 앱이 하나 죽으면 Stateless 앱은 단순히 같은 서비스의 역할을 하는 앱을 복제해주면 되고 Stateful 앱은 Arbiter의 역할을 하는 앱이 죽으면 반드시 Arbiter의 역할을 하는 앱이 만들어져야한다. 이름도 이름 자체가 고유 아이덴티티의 식별 요소이기 때문에 변경이 되면 안된다. 그리고 또 다른 특징은 Stateless 앱은 볼륨이 반드시 필요하진 않다. 반면 Stateful 앱은 각각의 역할이 다른 만큼 볼륨도 각각 써야 한다. 다음은 앱들에 연결이 되는 대상과 네트워킹 흐름에 대한 차이도 있는데 Stateless 앱은 대체로 사용자들이 접속을 하고 접속된 네트워크 트래픽은 한 앱에만 집중이 되면 서버에 문제가 생기기 때문에 그렇지 않도록 여러 앱에 분산이 되는 형태로 흘러가게 된다. 그렇지만 Stateful 앱은 대체로 내부 시스템들이 데이터베이스 저장을 위해서 연결을 하고 이 때, 트래픽은 각 앱의 특징에 맞게 들어와야 한다. Primary 앱은 Read/Write 권한이 있기 때문에 연결을 하려는 시스템에서 CRUD 모두 하려면 여기에 접속을 해야 하고 Secondary는 Read 권한만 있기 때문에 조회만 해도 되는 내부 시스템은 트래픽 분산을 위해서 App2 에 접속을 할 수가 있다. 
+
+이렇게 Stateful 앱은 역할에 따라 의도가 있는 연결이고 Stateless 앱은 단순 분산의 목적만 가지고 있는 연결인데 Kubernetes에서 이런 두 앱의 특징에 따라 활용할 수 있도록 나눠진 것이 Stateless 앱은 Replica Set 컨트롤러이다. 그리고 Stateful 앱은 Stateful Set 컨트롤러이다.
+
+![image](https://github.com/haeyonghahn/k8s-intermediate/assets/31242766/1b2864f2-3808-4eac-bae5-6e9c6d2a1024)
+
+해당 컨트롤러의 특징을 ReplicaSet Controller와 비교하면서 보자. 먼저 replicas1로 컨트롤러를 만들게 되면 StatefulSet도 ReplicaSet과 마찬가지로 해당 개수만큼 파드가 관리된다. 다른 점은 Pod가 생성될 때 ReplicaSet은 뒷부분이 랜덤으로 생성되지만 StatefulSet은 0부터 순차적으로 숫자가 붙어서 생성이 된다. 
+
+다음으로 StatefulSet PVC와 Headless Service를 보자. 마찬가지로 ReplicaSet과 비교해보면 ReplicaSet은 파드의 볼륨을 연결하려면 PVC를 별도로 직접 생성을 해놔야 한다. 그리고 ReplicaSet을 만들면 Template에 Pod의 내용의 PVC1을 지정을 해놓기 때문에 바로 연결이 된다. 근데 StatefulSet의 경우 Template을 통해 Pod가 만들어지고 추가적으로 volumeClaimTemplates가 있는데 이것을 통해서 PVC가 동적으로 생성이 되고 Pod와도 바로 연결이 된다. 그리고 replicas를 3으로 변경하면 ReplicaSet은 모든 Pod들이 똑같은 PVC 이름으로 PVC1을 가지고 있기 때문에 PVC1로 모두 연결이 되고 StatefulSet은 volumeClaimTemplates 때문에 Pod가 추가될 때마다 새로운 PVC가 생성이 되서 연결이 된다. 그래서 Pod마다 각자의 역할에 따른 데이터를 저장할 수가 있다. 그리고 Pod2가 삭제가 되면 다시 Pod2가 그대로 만들어지면서 기존에 Pod2가 연결이 돼 있던 PVC에 붙게 된다. 
+
+주의할 점은 ReplicaSet은 PVC가 Node1에 만들어졌다면 그 PVC에 연결하는 Pod도 Node1 위에 있어야 한다. 만약 Node2의 Pod가 생성되면 PVC랑 연결이 안되서 Pod가 생성이 안된다. 그래서 템플릿 안에 노드 셀렉터를 Node1로 해줘야 이러한 문제를 막을 수 있지만 StatefulSet은 동적으로 Pod와 PVC가 같은 노드에 만들어지기 떼문에 모든 노드에 균등하게 배포가 된다. 
+
+그리고 replicas를 0으로 줄이게 되면 StatefulSet은 파드를 순차적으로 삭제하지만 PVC는 삭제하지 않는다. 볼륨은 함부로 지우면 안되기 때문에 사용자가 직접 삭제를 해야 한다. 마지막으로 StatefulSet을 만들 때 ServiceName이라는 속성으로 서비스 이름을 넣을 수 있는데 이 이름과 매칭되는 Headless 서비스를 만들게 되면 파드의 예측 가능한 도메인 이름이 만들어지기 때문에 internal Server의 특정 파드 입장에서 원하는 StatefulSet에 연결할 수가 있다. 
